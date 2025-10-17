@@ -1,0 +1,16 @@
+venv/
+__pycache__/
+
+app/__pycache__/
+app/models/__pycache__/
+app/routes/__pycache__/
+app/schemas/__pycache__/
+app/utils/__pycache__/
+tests/__pycache__/
+worker/__pycache__
+worker/receipts
+
+*.pyc
+*.pyo
+*.pyd
+.env

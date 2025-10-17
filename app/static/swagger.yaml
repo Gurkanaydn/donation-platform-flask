@@ -1,0 +1,495 @@
+openapi: 3.0.3
+info:
+  title: Auth API
+  version: 1.0.0
+  description: Kullanıcı kayıt işlemleri için API dokümantasyonu.
+
+servers:
+  - url: http://localhost:5000
+    description: Local Geliştirme Sunucusu
+
+paths:
+  /auth/register:
+    post:
+      summary: Kullanıcı kaydı oluşturur
+      description: Yeni bir kullanıcıyı e-posta ve şifre ile sisteme kaydeder.
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  format: password
+                  example: mySecurePassword123
+      responses:
+        '201':
+          description: Kullanıcı başarıyla kaydedildi.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                    example: User registered successfully
+        '400':
+          description: Geçersiz istek veya kullanıcı zaten mevcut.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                    example: Email and password required
+  /auth/login:
+    post:
+      summary: Kullanıcı girişi
+      description: E-posta ve şifre ile login olur, access ve refresh token alır.
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  format: password
+                  example: mySecurePassword123
+      responses:
+        '200':
+          description: Başarılı giriş
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+        '401':
+          description: Geçersiz kullanıcı adı veya şifre
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                    example: Invalid credentials
+
+  /auth/refresh:
+    post:
+      summary: Access token yenileme
+      description: Refresh token ile yeni access token oluşturur.
+      tags:
+        - Authentication
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Yeni token oluşturuldu
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+        '401':
+          description: Geçersiz veya süresi dolmuş refresh token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                    example: Missing or invalid token
+
+  /auth/logout:
+    post:
+      summary: Çıkış yap
+      description: Refresh token kullanılarak logout yapılır ve token blacklist’e eklenir.
+      tags:
+        - Authentication
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Başarılı çıkış
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                    example: Logged out successfully
+
+  /api/campaigns:
+    post:
+      summary: Yeni kampanya oluştur
+      description: JWT ile authenticated kullanıcı tarafından kampanya oluşturulur.
+      tags:
+        - Campaign
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - description
+                - start_date
+                - end_date
+              properties:
+                title:
+                  type: string
+                  example: Black Friday Sale
+                description:
+                  type: string
+                  example: 50% discount on all products
+                start_date:
+                  type: string
+                  format: date
+                  example: 2025-11-01
+                end_date:
+                  type: string
+                  format: date
+                  example: 2025-11-30
+      responses:
+        '201':
+          description: Kampanya başarıyla oluşturuldu
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+
+    get:
+      summary: Kampanyaları listele
+      description: Kampanyaları filtreleme ve pagination ile listele.
+      tags:
+        - Campaign
+      parameters:
+        - name: cursor
+          in: query
+          description: Pagination cursor
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Maksimum kayıt sayısı
+          schema:
+            type: integer
+            default: 10
+        - name: title
+          in: query
+          description: Başlığa göre filtreleme
+          schema:
+            type: string
+        - name: start_date
+          in: query
+          description: Başlangıç tarihine göre filtreleme
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          description: Bitiş tarihine göre filtreleme
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Kampanya listesi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  campaigns:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Campaign'
+                  next_cursor:
+                    type: string
+                    nullable: true
+
+  /api/campaigns/{id}:
+    get:
+      summary: Kampanya detayı al
+      description: ID ile kampanya detayını getirir. Cache varsa cached data döner.
+      tags:
+        - Campaign
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Kampanya detayları
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  from_cached:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Campaign'
+        '404':
+          description: Kampanya bulunamadı
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Campaign not found
+
+    put:
+      summary: Kampanya güncelle
+      description: ID ile kampanya güncellenir, JWT ile authenticated kullanıcı gerektirir.
+      tags:
+        - Campaign
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                start_date:
+                  type: string
+                  format: date
+                end_date:
+                  type: string
+                  format: date
+      responses:
+        '200':
+          description: Güncellenmiş kampanya
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+        '404':
+          description: Kampanya bulunamadı
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+    delete:
+      summary: Kampanya sil
+      description: ID ile kampanya silinir, JWT ile authenticated kullanıcı gerektirir.
+      tags:
+        - Campaign
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Başarılı silme mesajı
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                    example: Campaign deleted successfully
+        '404':
+          description: Kampanya bulunamadı
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /api/donation:
+    post:
+      summary: Bağış oluştur
+      description: JWT ile authenticated kullanıcı, kampanyaya bağış yapar.
+      tags:
+        - Donation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - campaign_id
+                - amount
+              properties:
+                campaign_id:
+                  type: integer
+                  example: 1
+                amount:
+                  type: number
+                  format: float
+                  example: 100.50
+      responses:
+        '201':
+          description: Bağış oluşturuldu
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                    example: Donation created
+                  donation_id:
+                    type: integer
+        '404':
+          description: Kampanya bulunamadı
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Campaign not found
+
+  /api/donation/webhook:
+    post:
+      summary: Ödeme sağlayıcı webhook
+      description: Ödeme sağlayıcıdan gelen webhook doğrulaması ve bağış onayı.
+      tags:
+        - Donation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - webhook_id
+                - donation_id
+              properties:
+                webhook_id:
+                  type: string
+                  example: wh_12345
+                donation_id:
+                  type: integer
+                  example: 1
+      responses:
+        '200':
+          description: Webhook başarıyla işlendi veya zaten işlenmiş
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                    example: Donation confirmed
+        '400':
+          description: Geçersiz imza
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Invalid signature
+        '404':
+          description: Bağış veya kampanya bulunamadı
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Donation not found
+
+components:
+  schemas:
+    Campaign:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: Black Friday Sale
+        description:
+          type: string
+          example: 50% discount on all products
+        start_date:
+          type: string
+          format: date
+          example: 2025-11-01
+        end_date:
+          type: string
+          format: date
+          example: 2025-11-30
+        created_by:
+          type: integer
+          example: 42
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

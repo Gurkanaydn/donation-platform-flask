@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Gerçek Zamanlı Bağış Paneli</title>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Sayfayı ikiye böl */
+    #top, #bottom {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      border-top: 2px solid #ddd;
+    }
+
+    #top {
+      background-color: #f5f5f5;
+    }
+
+    #bottom {
+      background-color: #fff;
+    }
+
+    h2 {
+      margin-top: 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+    }
+
+    th {
+      background-color: #eee;
+    }
+
+    tr:nth-child(even) {
+      background-color: #fafafa;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div id="top">
+    <h2>İşlemler</h2>
+    <ul id="messages"></ul>
+  </div>
+
+
+  <div id="bottom">
+    <h2>Kampanya İstatistikleri </h2>
+    <table id="campaignTable">
+      <thead>
+        <tr>
+          <th>Kampanya ID</th>
+          <th>Toplam Bağış (₺)</th>
+          <th>Bağış Sayısı</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    const socket = io("http://localhost:5000"); // Flask-SocketIO backend adresin
+
+    // ====== ÜST KISIM: new_msg listener ======
+    const messages = document.getElementById('messages');
+
+    socket.on('new_msg', function(msg) {
+      const li = document.createElement('li');
+      li.textContent = msg;
+      messages.appendChild(li);
+    });
+
+    // ====== ALT KISIM: campaigns_update listener ======
+    const campaignTableBody = document.querySelector('#campaignTable tbody');
+
+    socket.on('campaigns_update', function(data) {
+        
+    
+        data.sort((a, b) => b.total_amount - a.total_amount);
+        campaignTableBody.innerHTML = '';
+
+        data.forEach(c => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+            <td>${c.campaign_id}</td>
+            <td>${c.total_amount}</td>
+            <td>${c.donor_count}</td>
+        `;
+        campaignTableBody.appendChild(row);
+      });
+    });
+  </script>
+</body>
+</html>

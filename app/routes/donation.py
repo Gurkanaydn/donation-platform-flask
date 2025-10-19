@@ -42,6 +42,7 @@ def create_donation():
     )
     db.session.add(donation)
     user_data = db.session.get(User, user_id)
+    db.session.commit()
     
     
     msg = f"{user_data.email} kullanıcısı {data["campaign_id"]} kampanyasına bağış yaptı."

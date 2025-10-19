@@ -28,11 +28,11 @@ paths:
                 email:
                   type: string
                   format: email
-                  example: user@example.com
+                  example: testdonate0@gmail.com
                 password:
                   type: string
                   format: password
-                  example: mySecurePassword123
+                  example: 123456
       responses:
         '201':
           description: Kullanıcı başarıyla kaydedildi.
@@ -73,11 +73,11 @@ paths:
                 email:
                   type: string
                   format: email
-                  example: user@example.com
+                  example: testdonate0@gmail.com
                 password:
                   type: string
                   format: password
-                  example: mySecurePassword123
+                  example: 123456
       responses:
         '200':
           description: Başarılı giriş
